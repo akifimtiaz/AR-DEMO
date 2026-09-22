@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content='width=device-width, height=device-height, initial-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=yes'>
-    <title>Unity WebGL Player | AR Demo Proj</title>
+    <title>Unity WebGL Player | imagine web AR</title>
     <link rel="stylesheet" href="TemplateData/style.css">
     <style>
         html{
@@ -17,11 +17,6 @@
             width: 100vw;
             overflow: hidden;
         }
-        #unity-container { isolation: isolate; }
-        #unity-canvas { position: relative; z-index: 1 !important; }
-        #video-canvas { z-index: 0 !important; pointer-events: none; }
-        #webcam-video { pointer-events: none; }
-        #unity-loading-bar { z-index: 2; pointer-events: none; }
         .ctaDiv {
             display: flex;
             flex-direction: column;
@@ -89,17 +84,6 @@
         var unityCanvas = document.querySelector("#unity-canvas");
         var videoCanvas = document.querySelector("#video-canvas");
         window.iTracker = new ImageTracker(unityCanvas, videoCanvas);
-        const resizeActiveTracker = window.iTracker.resizeWithDelay.bind(window.iTracker);
-        window.iTracker.resizeWithDelay = function(event) {
-            if (!window.iTracker.VIDEO) return;
-            // The plugin's resize handler restarts tracking unconditionally.
-            // Menu scenes have no tracker/settings yet, so only resize the video.
-            if (!window.iTracker.isStarted) {
-                window.iTracker.resize();
-                return;
-            }
-            resizeActiveTracker(event);
-        };
         window.iTracker.initialize()
         .then(async ()=>{
             console.log("ImageTracker initialized!");
@@ -107,68 +91,56 @@
             document.getElementById("startARButton").style.display = "block";
         })
         .catch(error => {
-            console.error("Failed to initialize ImageTracker:", error);
+            console.error("Failed to initialize ImageTracker. Are you missing opencv.js?");
             ShowError("Failed to initialize the experience.");
-        });
+        });;
+        
     </script>
-    <script src="Build/AR-DEMO.loader.js"></script>
+    <script src="Build/webGL.loader.js"></script>
     <script>
             var container = document.querySelector("#unity-container");
             var canvas = document.querySelector("#unity-canvas");
             var loadingBar = document.querySelector("#unity-loading-bar");
             var progressBarFull = document.querySelector("#unity-progress-bar-full");
-            var startingAR = false;
-            var webcamStream = null;
-            async function StartAR() {
-                if (startingAR || window.unityInstance) return;
-                startingAR = true;
-                try {
-                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                        throw new Error("Camera access requires HTTPS or localhost and a browser with camera support.");
+            function StartAR() {
+                canvas.style.width = window.innerWidth + "px";
+                canvas.style.height = window.innerHeight + "px";
+                
+                document.getElementById("startARDiv").style.display = "none";
+                createUnityInstance(document.querySelector("#unity-canvas"), {
+                    dataUrl: "Build/webGL.data",
+                    frameworkUrl: "Build/webGL.framework.js",
+                    codeUrl: "Build/webGL.wasm",
+                    streamingAssetsUrl: "StreamingAssets",
+                    companyName: "DefaultCompany",
+                    productName: "imagine web AR",
+                    productVersion: "0.1",
+                    //webglContextAttributes: { "preserveDrawingBuffer": true },
+                    // matchWebGLToCanvasSize: false, // Uncomment this to separately control WebGL canvas render size and DOM element size.
+                    // devicePixelRatio: 1, // Uncomment this to override low DPI rendering on high DPI displays.
+                    },
+                    (progress) => {
+                        progressBarFull.style.width = 100 * progress + "%";
                     }
-                    // Request permission from the start button before loading Unity.
-                    webcamStream = await navigator.mediaDevices.getUserMedia(window.WEBCAM_SETTINGS);
-                    const video = document.querySelector("#webcam-video");
-                    video.srcObject = webcamStream;
-                    await video.play();
-                    canvas.style.width = window.innerWidth + "px";
-                    canvas.style.height = window.innerHeight + "px";
-                    document.getElementById("startARDiv").style.display = "none";
-                    loadingBar.style.display = "block";
-                    await createUnityInstance(document.querySelector("#unity-canvas"), {
-                        dataUrl: "Build/AR-DEMO.data",
-                        frameworkUrl: "Build/AR-DEMO.framework.js",
-                        codeUrl: "Build/AR-DEMO.wasm",
-                        streamingAssetsUrl: "StreamingAssets",
-                        companyName: "DefaultCompany",
-                        productName: "AR Demo Proj",
-                        productVersion: "0.1.0",
-                        //webglContextAttributes: { "preserveDrawingBuffer": true },
-                        // matchWebGLToCanvasSize: false, // Uncomment this to separately control WebGL canvas render size and DOM element size.
-                        // devicePixelRatio: 1, // Uncomment this to override low DPI rendering on high DPI displays.
-                        },
-                        (progress) => {
-                            progressBarFull.style.width = 100 * progress + "%";
-                        }
-                    ).then(async (unityInstance) => {
-                        window.unityInstance = unityInstance;
-                        await StartWebcam();
-                        loadingBar.style.display = "none";
-                    });
-                } catch (error) {
-                    console.error("AR startup failed:", error);
-                    if (webcamStream) webcamStream.getTracks().forEach(track => track.stop());
-                    webcamStream = null;
-                    const messages = {
-                        NotAllowedError: "Camera permission was denied. Allow camera access in your browser, then reload.",
-                        NotFoundError: "No camera was found. Connect or enable a camera, then reload.",
-                        NotReadableError: "The camera could not start. Close other apps using it, then reload."
-                    };
-                    ShowError(messages[error.name] || "Unable to start AR: " + (error.message || error));
-                } finally {
+                ).then((unityInstance) => {
+                    window.unityInstance = unityInstance;
+                    StartWebcam();
+                    //ENABLE THIS FOR WECHAT
+                    //[FIX]: some browsers (such as Wechat) does not allow webcam autoplay so we need to start the webcam manually via new button press
+                    // window.waitForVideo = () => {
+                    //     setTimeout(() => {
+                    //         if (!window.iTracker.VIDEO) {
+                    //             window.waitForVideo();
+                    //         }
+                    //         else if (window.iTracker.VIDEO.currentTime <= 0) {
+                    //             document.getElementById("startWebcamManuallyDiv").style.display = "flex";
+                    //         }
+                    //     }, 2500)
+                    // };
+                    // window.waitForVideo();
                     loadingBar.style.display = "none";
-                    startingAR = false;
-                }
+                });
+                loadingBar.style.display = "block";
             }
             window.WEBCAM_SETTINGS = {
                 video: {
@@ -177,45 +149,64 @@
                 audio: false
             };
             async function StartWebcam(){
-                const video = document.querySelector("#webcam-video");
-                const track = webcamStream.getVideoTracks()[0];
-                iTracker.WEBCAM_NAME = track ? track.label : "";
-                await iTracker.startWebcam(video);
-                console.log("Webcam started successfully");
+                try{
+                    var stream = await navigator.mediaDevices.getUserMedia(window.WEBCAM_SETTINGS);
+                    const video = document.querySelector("#webcam-video");
+                    video.srcObject = stream;
+                    iTracker.startWebcam(video);
+                    try {
+                        await iTracker.startWebcam(video);
+                        console.log("Webcam started successfully");
+                    }
+                    catch(err){
+                        console.error("Webcam failed to start - ", err);
+                        ShowError("Failed to start the experience. Webcam failed to start");
+                    }
+                }
+                catch (err) {
+                    console.log("getUserMedia Error", err);
+                    ShowError("Failed to start the experience. Camera permission was denied");
+                }
+                
             }
             async function LoadWebcams(){
-                const select = document.getElementById("chooseCamSel");
-                select.innerHTML = "";
-                const automatic = document.createElement("option");
-                automatic.value = "";
-                automatic.textContent = "Automatic (prefer rear camera)";
-                select.appendChild(automatic);
-                iTracker.WEBCAM_NAME = "";
-                // Enumeration can be empty or blocked until the user grants permission.
-                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return;
-                try {
-                    const devices = await navigator.mediaDevices.enumerateDevices();
-                    devices.filter(device => device.kind === "videoinput" && device.deviceId)
-                        .forEach((device, index) => {
-                            const option = document.createElement("option");
-                            option.value = device.deviceId;
-                            option.textContent = device.label || `Camera ${index + 1}`;
-                            select.appendChild(option);
-                        });
-                    select.style.display = select.options.length > 1 ? "block" : "none";
-                } catch (error) {
-                    console.warn("Camera list unavailable; using automatic selection:", error);
-                }
+                let backCams = [];
+                let devices = await navigator.mediaDevices.enumerateDevices();
+                devices.forEach(mediaDevice => {
+                    if (mediaDevice.kind === 'videoinput' && !mediaDevice.label.includes('facing front')) {
+                        backCams.push(mediaDevice);
+                    }
+                });
+                var select = document.getElementById("chooseCamSel");
+                select.style.display = "block";
+                var count = 0;
+                //reverse array because some Android phones can't distinguish front and back cams at first load
+                //and when this happens, most of the time, front cam goes first and back cam goes last
+                backCams = backCams.reverse();
+                backCams.forEach(mediaDevice => {
+                    const option = document.createElement('option');
+                    option.value = mediaDevice.deviceId;
+                    let label = `Camera ${count}`;
+                    if (mediaDevice.label) {
+                        label = mediaDevice.label
+                    }
+                    const textNode = document.createTextNode(label);
+                    option.appendChild(textNode);
+                    select.appendChild(option);
+                    count++;
+                });
+                iTracker.WEBCAM_NAME = select.options[select.selectedIndex].innerHTML;
             }
             function SelectCam(){
-                const select = document.getElementById("chooseCamSel");
-                window.WEBCAM_SETTINGS.video = select.value
-                    ? { deviceId: { exact: select.value } }
-                    : { facingMode: "environment" };
+                var select = document.getElementById("chooseCamSel");
+                window.deviceId = select.value;
+                window.WEBCAM_SETTINGS.video['deviceId'] = deviceId;
+                //console.log(window.WEBCAM_SETTINGS);
+                iTracker.WEBCAM_NAME = select.options[select.selectedIndex].innerHTML;
             }
             function ShowError(error){
                 document.getElementById("errorDiv").style.display = "flex";
-                document.getElementById("errorText").textContent = error;
+                document.getElementById("errorText").innerHTML = error;
             }
             function ShowScreenshot(dataUrl){
                 document.getElementById("screenshotDiv").style.display = "flex";
@@ -226,8 +217,9 @@
             function ShowConfirmUrl(url){
                 document.getElementById("confirmUrlDiv").style.display = "flex";
                 window.newUrlString = url;
-                document.getElementById("confirmUrlText").innerText = "Are you sure you want to visit " + url;
+                document.getElementById("confirmUrlText").innerText = "Are you sure you want to visit " + url;                
             }
+            
             //ENABLE THIS FOR WECHAT
             // function StartCameraManually() {
             //     document.getElementById("startWebcamManuallyDiv").style.display = "none";
