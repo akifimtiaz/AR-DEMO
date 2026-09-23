@@ -153,7 +153,6 @@
                     var stream = await navigator.mediaDevices.getUserMedia(window.WEBCAM_SETTINGS);
                     const video = document.querySelector("#webcam-video");
                     video.srcObject = stream;
-                    iTracker.startWebcam(video);
                     try {
                         await iTracker.startWebcam(video);
                         console.log("Webcam started successfully");
