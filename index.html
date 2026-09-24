@@ -93,7 +93,7 @@
         });;
         
     </script>
-    <script src="Build/webGL-optimized.loader.js"></script>
+    <script src="Build/icotec-prototype.loader.js"></script>
     <script>
             var container = document.querySelector("#unity-container");
             var canvas = document.querySelector("#unity-canvas");
@@ -105,9 +105,9 @@
                 
                 document.getElementById("startARDiv").style.display = "none";
                 createUnityInstance(document.querySelector("#unity-canvas"), {
-                    dataUrl: "Build/webGL-optimized.data",
-                    frameworkUrl: "Build/webGL-optimized.framework.js",
-                    codeUrl: "Build/webGL-optimized.wasm",
+                    dataUrl: "Build/icotec-prototype.data",
+                    frameworkUrl: "Build/icotec-prototype.framework.js",
+                    codeUrl: "Build/icotec-prototype.wasm",
                     streamingAssetsUrl: "StreamingAssets",
                     companyName: "DefaultCompany",
                     productName: "imagine web AR",
@@ -148,6 +148,7 @@
             async function StartWebcam(){
                 try{
                     var stream = await navigator.mediaDevices.getUserMedia(window.WEBCAM_SETTINGS);
+                    EmitIcotecEvent("camera_permission_granted");
                     const video = document.querySelector("#webcam-video");
                     video.srcObject = stream;
                     try {
@@ -164,6 +165,14 @@
                     ShowError("Failed to start the experience. Camera permission was denied");
                 }
                 
+            }
+            function EmitIcotecEvent(eventName){
+                window.dispatchEvent(new CustomEvent("icotec-webar-event", {
+                    detail: { event: eventName }
+                }));
+                if (typeof window.gtag === "function") {
+                    window.gtag("event", eventName);
+                }
             }
             async function LoadWebcams(){
                 let backCams = [];
